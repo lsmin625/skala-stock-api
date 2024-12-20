@@ -7,10 +7,10 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 @EnableJpaAuditing
 @SpringBootApplication(exclude = { RedisRepositoriesAutoConfiguration.class })
-public class RestApiBaseApplication {
+public class SkalaStockApiApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(RestApiBaseApplication.class, args);
+		SpringApplication.run(SkalaStockApiApplication.class, args);
 	}
 
 }
