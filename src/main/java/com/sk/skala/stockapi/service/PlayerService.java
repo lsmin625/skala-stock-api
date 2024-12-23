@@ -1,10 +1,15 @@
 package com.sk.skala.stockapi.service;
 
-import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import com.sk.skala.stockapi.data.common.PagedList;
+import com.sk.skala.stockapi.data.common.Response;
 import com.sk.skala.stockapi.data.table.Player;
 import com.sk.skala.stockapi.data.table.PlayerStock;
 import com.sk.skala.stockapi.repository.PlayerRepository;
@@ -23,8 +28,19 @@ public class PlayerService {
 		this.playerStockRepository = playerStockRepository;
 	}
 
-	public List<Player> getAllPlayers() {
-		return playerRepository.findAll();
+	public Response getAllPlayers(int offset, int count) {
+		Pageable pageable = PageRequest.of(offset, count, Sort.by(Sort.Order.asc("playerId")));
+		Page<Player> paged = playerRepository.findAll(pageable);
+
+		PagedList pagedList = new PagedList();
+		pagedList.setTotal(paged.getTotalElements());
+		pagedList.setOffset(offset);
+		pagedList.setCount(paged.getNumberOfElements());
+		pagedList.setList(paged.getContent());
+
+		Response response = new Response();
+		response.setBody(pagedList);
+		return response;
 	}
 
 	public Optional<Player> getPlayerById(String playerId) {

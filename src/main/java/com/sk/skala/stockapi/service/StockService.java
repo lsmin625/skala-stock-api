@@ -26,7 +26,7 @@ public class StockService {
 	}
 
 	public Response getAllStocks(int offset, int count) {
-		Pageable pageable = PageRequest.of(offset, count, Sort.by(Sort.Order.asc("name")));
+		Pageable pageable = PageRequest.of(offset, count, Sort.by(Sort.Order.asc("stockName")));
 		Page<Stock> paged = stockRepository.findAll(pageable);
 
 		PagedList pagedList = new PagedList();
@@ -52,19 +52,19 @@ public class StockService {
 	}
 
 	public Response createStock(Stock stock) {
-		Optional<Stock> option = stockRepository.findByNameLike(StringTool.like(stock.getName()));
+		Optional<Stock> option = stockRepository.findByNameLike(StringTool.like(stock.getStockName()));
 		if (!option.isEmpty()) {
 			throw new ResponseException(Error.DATA_DUPLICATED);
 		}
 
-		stock.setId(0L);
+		stock.setStockId(0L);
 		stockRepository.save(stock);
 
 		return new Response();
 	}
 
 	public Response updateStock(Stock stock) {
-		Optional<Stock> option = stockRepository.findById(stock.getId());
+		Optional<Stock> option = stockRepository.findById(stock.getStockId());
 		if (option.isEmpty()) {
 			throw new ResponseException(Error.DATA_NOT_FOUND);
 		}
@@ -73,11 +73,11 @@ public class StockService {
 	}
 
 	public Response deleteStock(Stock stock) {
-		Optional<Stock> option = stockRepository.findById(stock.getId());
+		Optional<Stock> option = stockRepository.findById(stock.getStockId());
 		if (option.isEmpty()) {
 			throw new ResponseException(Error.DATA_NOT_FOUND);
 		}
-		stockRepository.deleteById(stock.getId());
+		stockRepository.deleteById(stock.getStockId());
 		return new Response();
 	}
 }

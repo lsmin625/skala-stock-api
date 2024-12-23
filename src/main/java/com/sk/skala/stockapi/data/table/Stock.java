@@ -12,16 +12,16 @@ public class Stock {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+	private Long stockId;
 
-	private String name;
-	private Double price;
+	private String stockName;
+	private Double stockPrice;
 
 	public Stock() {
 	}
 
 	public Stock(String name, Double price) {
-		this.name = name;
-		this.price = price;
+		this.stockName = name;
+		this.stockPrice = price;
 	}
 }
