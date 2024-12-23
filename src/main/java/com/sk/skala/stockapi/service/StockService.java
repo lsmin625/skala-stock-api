@@ -16,14 +16,13 @@ import com.sk.skala.stockapi.exception.ResponseException;
 import com.sk.skala.stockapi.repository.StockRepository;
 import com.sk.skala.stockapi.tools.StringTool;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor
 public class StockService {
 
 	private final StockRepository stockRepository;
-
-	public StockService(StockRepository stockRepository) {
-		this.stockRepository = stockRepository;
-	}
 
 	public Response getAllStocks(int offset, int count) {
 		Pageable pageable = PageRequest.of(offset, count, Sort.by(Sort.Order.asc("stockName")));
