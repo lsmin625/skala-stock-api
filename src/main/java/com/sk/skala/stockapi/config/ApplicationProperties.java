@@ -1,8 +1,5 @@
 package com.sk.skala.stockapi.config;
 
-import java.util.List;
-import java.util.Set;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
@@ -13,14 +10,7 @@ import lombok.Data;
 @Data
 public class ApplicationProperties {
 	private String name;
-	private Log log;
 	private Health health;
-
-	@Data
-	public static class Log {
-		private List<String> customHeaders;
-		private Set<String> hiddens;
-	}
 
 	@Data
 	public static class Health {

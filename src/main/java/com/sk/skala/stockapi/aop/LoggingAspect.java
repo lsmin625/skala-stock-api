@@ -1,9 +1,6 @@
 package com.sk.skala.stockapi.aop;
 
 import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -12,8 +9,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sk.skala.stockapi.config.ApplicationProperties;
 import com.sk.skala.stockapi.config.Constant;
 import com.sk.skala.stockapi.config.Error;
@@ -58,18 +53,17 @@ public class LoggingAspect {
 			apiLog.setApiMethod(request.getMethod());
 			apiLog.setApiController(controller);
 			apiLog.setRequestParams(request.getQueryString());
-			apiLog.setCustomHeaders(getCustomHeaders(request));
 
 			String contentType = request.getContentType();
 			if (contentType != null && Constant.TEXT_TYPES.contains(contentType.toLowerCase())) {
 				String body = JsonTool.toString(joinPoint.getArgs());
-				apiLog.setRequestBody(getMaskedBody(body));
+				apiLog.setRequestBody(body);
 			}
 
 			Object result = joinPoint.proceed();
 			if (result instanceof Response) {
 				String body = JsonTool.toString(result);
-				apiLog.setResponseBody(getMaskedBody(body));
+				apiLog.setResponseBody(body);
 			}
 
 			apiLog.setApiResult(Constant.RESULT_SUCCESS);
@@ -110,17 +104,6 @@ public class LoggingAspect {
 		return targetClass.getMethod(methodName, parameterTypes);
 	}
 
-	Map<String, String> getCustomHeaders(HttpServletRequest request) {
-		Map<String, String> map = new HashMap<>();
-
-		applicationProperties.getLog().getCustomHeaders().forEach(headerName -> {
-			String headerValue = request.getHeader(headerName);
-			map.put(headerName, headerValue);
-		});
-
-		return map;
-	}
-
 	String getRemoteAddress(HttpServletRequest request) {
 		String address = request.getHeader("X-Forwarded-For");
 		if (StringTool.isEmpty(address)) {
@@ -128,35 +111,6 @@ public class LoggingAspect {
 		} else {
 			String[] values = address.split(",");
 			return values[0].trim();
-		}
-	}
-
-	String getMaskedBody(String body) {
-		if (body == null) {
-			return "";
-		}
-
-		JsonNode rootNode = JsonTool.toJsonNode(body);
-		hideValues(rootNode, applicationProperties.getLog().getHiddens());
-		return JsonTool.toString(rootNode);
-	}
-
-	void hideValues(JsonNode node, Set<String> keysToHide) {
-		if (keysToHide == null) {
-			return;
-		}
-
-		if (node.isObject()) {
-			ObjectNode objectNode = (ObjectNode) node;
-			objectNode.fieldNames().forEachRemaining(fieldName -> {
-				if (keysToHide.contains(fieldName)) {
-					objectNode.put(fieldName, Constant.HIDDEN);
-				} else {
-					hideValues(objectNode.get(fieldName), keysToHide);
-				}
-			});
-		} else if (node.isArray()) {
-			node.forEach(childNode -> hideValues(childNode, keysToHide));
 		}
 	}
 }
