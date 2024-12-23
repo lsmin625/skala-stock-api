@@ -1,2 +1,2 @@
-# rest-api-base
-Rest API application template using Spring boot
+# skala-stock-api
+Rest API application for SKALA STOCK
