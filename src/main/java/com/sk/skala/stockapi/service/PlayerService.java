@@ -8,25 +8,27 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import com.sk.skala.stockapi.config.Error;
 import com.sk.skala.stockapi.data.common.PagedList;
 import com.sk.skala.stockapi.data.common.Response;
 import com.sk.skala.stockapi.data.table.Player;
 import com.sk.skala.stockapi.data.table.PlayerStock;
+import com.sk.skala.stockapi.data.table.Stock;
+import com.sk.skala.stockapi.exception.ResponseException;
 import com.sk.skala.stockapi.repository.PlayerRepository;
 import com.sk.skala.stockapi.repository.PlayerStockRepository;
+import com.sk.skala.stockapi.repository.StockRepository;
 
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 
 @Service
+@RequiredArgsConstructor
 public class PlayerService {
 
+	private final StockRepository stockRepository;
 	private final PlayerRepository playerRepository;
 	private final PlayerStockRepository playerStockRepository;
-
-	public PlayerService(PlayerRepository playerRepository, PlayerStockRepository playerStockRepository) {
-		this.playerRepository = playerRepository;
-		this.playerStockRepository = playerStockRepository;
-	}
 
 	public Response getAllPlayers(int offset, int count) {
 		Pageable pageable = PageRequest.of(offset, count, Sort.by(Sort.Order.asc("playerId")));
@@ -43,39 +45,113 @@ public class PlayerService {
 		return response;
 	}
 
-	public Optional<Player> getPlayerById(String playerId) {
-		return playerRepository.findById(playerId);
+	public Response getPlayerById(String playerId) {
+		Optional<Player> option = playerRepository.findById(playerId);
+		if (option.isEmpty()) {
+			throw new ResponseException(Error.DATA_NOT_FOUND);
+		}
+
+		Response response = new Response();
+		response.setBody(option.get());
+		return response;
 	}
 
-	public Player createPlayer(Player player) {
-		return playerRepository.save(player);
+	public Response createPlayer(Player player) {
+		Optional<Player> option = playerRepository.findById(player.getPlayerId());
+		if (!option.isEmpty()) {
+			throw new ResponseException(Error.DATA_DUPLICATED);
+		}
+		playerRepository.save(player);
+
+		return new Response();
 	}
 
-	public Player updatePlayer(String playerId, Player playerDetails) {
-		return playerRepository.findById(playerId).map(player -> {
-			player.setPlayerMoney(playerDetails.getPlayerMoney());
-			player.setPlayerStocks(playerDetails.getPlayerStocks());
-			return playerRepository.save(player);
-		}).orElseThrow(() -> new RuntimeException("Player not found with id " + playerId));
+	public Response updatePlayer(Player player) {
+		Optional<Player> option = playerRepository.findById(player.getPlayerId());
+		if (option.isEmpty()) {
+			throw new ResponseException(Error.DATA_NOT_FOUND);
+		}
+		playerRepository.save(player);
+		return new Response();
 	}
 
-	public void deletePlayer(String playerId) {
-		playerRepository.deleteById(playerId);
+	public Response deletePlayer(Player player) {
+		Optional<Player> option = playerRepository.findById(player.getPlayerId());
+		if (option.isEmpty()) {
+			throw new ResponseException(Error.DATA_NOT_FOUND);
+		}
+		playerRepository.deleteById(player.getPlayerId());
+		return new Response();
 	}
 
 	@Transactional
-	public PlayerStock addPlayerStock(String playerId, PlayerStock stock) {
-		Player player = playerRepository.findById(playerId)
-				.orElseThrow(() -> new RuntimeException("Player not found with id " + playerId));
+	public Response buyPlayerStock(String playerId, Long stockId, int quantity) {
+		Optional<Player> optionalPlayer = playerRepository.findById(playerId);
+		if (optionalPlayer.isEmpty()) {
+			throw new ResponseException(Error.DATA_NOT_FOUND);
+		}
+		Player player = optionalPlayer.get();
 
-		stock.setPlayer(player);
+		Optional<Stock> optionalStock = stockRepository.findById(stockId);
+		if (optionalStock.isEmpty()) {
+			throw new ResponseException(Error.DATA_NOT_FOUND);
+		}
+		Stock stock = optionalStock.get();
 
-		PlayerStock savedStock = playerStockRepository.save(stock);
+		double totalCost = stock.getStockPrice() * quantity;
+
+		if (totalCost > player.getPlayerMoney()) {
+			throw new ResponseException(Error.INSUFFICIENT_FUNDS);
+		}
+
+		player.setPlayerMoney(player.getPlayerMoney() - totalCost);
+
+		PlayerStock playerStock = new PlayerStock();
+		playerStock.setPlayer(player);
+		playerStock.setStock(stock);
+		playerStock.setStockQuantity(quantity);
+
+		PlayerStock savedStock = playerStockRepository.save(playerStock);
+
 		player.getPlayerStocks().add(savedStock);
-
 		playerRepository.save(player);
 
-		return savedStock;
+		return new Response();
+	}
+
+	@Transactional
+	public Response sellPlayerStock(String playerId, Long stockId, int quantity) {
+		Optional<Player> optionalPlayer = playerRepository.findById(playerId);
+		if (optionalPlayer.isEmpty()) {
+			throw new ResponseException(Error.DATA_NOT_FOUND);
+		}
+		Player player = optionalPlayer.get();
+
+		Optional<PlayerStock> optionalPlayerStock = playerStockRepository.findByPlayerAndStockId(player, stockId);
+		if (optionalPlayerStock.isEmpty()) {
+			throw new ResponseException(Error.DATA_NOT_FOUND);
+		}
+		PlayerStock playerStock = optionalPlayerStock.get();
+		Stock stock = playerStock.getStock();
+
+		if (quantity > playerStock.getStockQuantity()) {
+			throw new ResponseException(Error.INSUFFICIENT_QUANTITY);
+		}
+
+		double totalEarnings = stock.getStockPrice() * quantity;
+
+		player.setPlayerMoney(player.getPlayerMoney() + totalEarnings);
+
+		playerStock.setStockQuantity(playerStock.getStockQuantity() - quantity);
+
+		if (playerStock.getStockQuantity() == 0) {
+			player.getPlayerStocks().remove(playerStock);
+		}
+
+		playerStockRepository.save(playerStock);
+		playerRepository.save(player);
+
+		return new Response();
 	}
 
 }

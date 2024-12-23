@@ -14,17 +14,16 @@ import com.sk.skala.stockapi.data.common.Response;
 import com.sk.skala.stockapi.data.table.Stock;
 import com.sk.skala.stockapi.service.StockService;
 
+import lombok.RequiredArgsConstructor;
+
 @RestController
 @RequestMapping("/api/stocks")
+@RequiredArgsConstructor
 public class StockController {
 
 	private final StockService stockService;
 
-	public StockController(StockService stockService) {
-		this.stockService = stockService;
-	}
-
-	@GetMapping
+	@GetMapping("/list")
 	public Response getAllStocks(@RequestParam(defaultValue = "0") Integer offset,
 			@RequestParam(defaultValue = "10") Integer count) {
 		return stockService.getAllStocks(offset, count);
