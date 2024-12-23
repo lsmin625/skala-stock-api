@@ -11,5 +11,5 @@ import com.sk.skala.stockapi.data.table.Stock;
 public interface StockRepository extends JpaRepository<Stock, Long> {
 	Page<Stock> findAll(Pageable pageable);
 
-	Optional<Stock> findByNameLike(String keyword);
+	Optional<Stock> findByStockNameLike(String keyword);
 }

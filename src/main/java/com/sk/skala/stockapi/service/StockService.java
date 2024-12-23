@@ -51,19 +51,19 @@ public class StockService {
 	}
 
 	public Response createStock(Stock stock) {
-		Optional<Stock> option = stockRepository.findByNameLike(StringTool.like(stock.getStockName()));
+		Optional<Stock> option = stockRepository.findByStockNameLike(StringTool.like(stock.getStockName()));
 		if (!option.isEmpty()) {
 			throw new ResponseException(Error.DATA_DUPLICATED);
 		}
 
-		stock.setStockId(0L);
+		stock.setId(0L);
 		stockRepository.save(stock);
 
 		return new Response();
 	}
 
 	public Response updateStock(Stock stock) {
-		Optional<Stock> option = stockRepository.findById(stock.getStockId());
+		Optional<Stock> option = stockRepository.findById(stock.getId());
 		if (option.isEmpty()) {
 			throw new ResponseException(Error.DATA_NOT_FOUND);
 		}
@@ -72,11 +72,11 @@ public class StockService {
 	}
 
 	public Response deleteStock(Stock stock) {
-		Optional<Stock> option = stockRepository.findById(stock.getStockId());
+		Optional<Stock> option = stockRepository.findById(stock.getId());
 		if (option.isEmpty()) {
 			throw new ResponseException(Error.DATA_NOT_FOUND);
 		}
-		stockRepository.deleteById(stock.getStockId());
+		stockRepository.deleteById(stock.getId());
 		return new Response();
 	}
 }
