@@ -1,12 +1,20 @@
 package com.sk.skala.stockapi.service;
 
-import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import com.sk.skala.stockapi.config.Error;
+import com.sk.skala.stockapi.data.common.PagedList;
+import com.sk.skala.stockapi.data.common.Response;
 import com.sk.skala.stockapi.data.table.Stock;
+import com.sk.skala.stockapi.exception.ResponseException;
 import com.sk.skala.stockapi.repository.StockRepository;
+import com.sk.skala.stockapi.tools.StringTool;
 
 @Service
 public class StockService {
@@ -17,27 +25,59 @@ public class StockService {
 		this.stockRepository = stockRepository;
 	}
 
-	public List<Stock> getAllStocks() {
-		return stockRepository.findAll();
+	public Response getAllStocks(int offset, int count) {
+		Pageable pageable = PageRequest.of(offset, count, Sort.by(Sort.Order.asc("name")));
+		Page<Stock> paged = stockRepository.findAll(pageable);
+
+		PagedList pagedList = new PagedList();
+		pagedList.setTotal(paged.getTotalElements());
+		pagedList.setOffset(offset);
+		pagedList.setCount(paged.getNumberOfElements());
+		pagedList.setList(paged.getContent());
+
+		Response response = new Response();
+		response.setBody(pagedList);
+		return response;
 	}
 
-	public Optional<Stock> getStockById(Long id) {
-		return stockRepository.findById(id);
+	public Response getStockById(Long id) {
+		Optional<Stock> option = stockRepository.findById(id);
+		if (option.isEmpty()) {
+			throw new ResponseException(Error.DATA_NOT_FOUND);
+		}
+
+		Response response = new Response();
+		response.setBody(option.get());
+		return response;
 	}
 
-	public Stock createStock(Stock stock) {
-		return stockRepository.save(stock);
+	public Response createStock(Stock stock) {
+		Optional<Stock> option = stockRepository.findByNameLike(StringTool.like(stock.getName()));
+		if (!option.isEmpty()) {
+			throw new ResponseException(Error.DATA_DUPLICATED);
+		}
+
+		stock.setId(0L);
+		stockRepository.save(stock);
+
+		return new Response();
 	}
 
-	public Stock updateStock(Long id, Stock stockDetails) {
-		return stockRepository.findById(id).map(stock -> {
-			stock.setName(stockDetails.getName());
-			stock.setPrice(stockDetails.getPrice());
-			return stockRepository.save(stock);
-		}).orElseThrow(() -> new RuntimeException("Unknown Stock ID=" + id));
+	public Response updateStock(Stock stock) {
+		Optional<Stock> option = stockRepository.findById(stock.getId());
+		if (option.isEmpty()) {
+			throw new ResponseException(Error.DATA_NOT_FOUND);
+		}
+		stockRepository.save(stock);
+		return new Response();
 	}
 
-	public void deleteStock(Long id) {
-		stockRepository.deleteById(id);
+	public Response deleteStock(Stock stock) {
+		Optional<Stock> option = stockRepository.findById(stock.getId());
+		if (option.isEmpty()) {
+			throw new ResponseException(Error.DATA_NOT_FOUND);
+		}
+		stockRepository.deleteById(stock.getId());
+		return new Response();
 	}
 }

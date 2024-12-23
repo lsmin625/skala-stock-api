@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.sk.skala.stockapi.config.Error;
 import com.sk.skala.stockapi.data.common.Response;
+import com.sk.skala.stockapi.exception.ParameterException;
+import com.sk.skala.stockapi.exception.ResponseException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,4 +32,25 @@ public class GlobalExceptionHandler {
 		return response;
 	}
 
+	@ExceptionHandler(value = SecurityException.class)
+	public @ResponseBody Response takeSecurityException(SecurityException e) {
+		Response response = new Response();
+		response.setError(Error.NOT_AUTHENTICATED.getCode(), e.getMessage());
+		log.error("GlobalExceptionHandler.SecurityException: {}", e.getMessage());
+		return response;
+	}
+
+	@ExceptionHandler(value = ParameterException.class)
+	public @ResponseBody Response takeParameterException(ParameterException e) {
+		Response response = new Response();
+		response.setError(e.getCode(), e.getMessage());
+		return response;
+	}
+
+	@ExceptionHandler(value = ResponseException.class)
+	public @ResponseBody Response takeResponseException(ResponseException e) {
+		Response response = new Response();
+		response.setError(e.getCode(), e.getMessage());
+		return response;
+	}
 }
