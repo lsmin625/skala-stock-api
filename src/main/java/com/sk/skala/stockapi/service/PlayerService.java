@@ -10,6 +10,8 @@ import com.sk.skala.stockapi.data.table.PlayerStock;
 import com.sk.skala.stockapi.repository.PlayerRepository;
 import com.sk.skala.stockapi.repository.PlayerStockRepository;
 
+import jakarta.transaction.Transactional;
+
 @Service
 public class PlayerService {
 
@@ -45,14 +47,19 @@ public class PlayerService {
 		playerRepository.deleteById(playerId);
 	}
 
+	@Transactional
 	public PlayerStock addPlayerStock(String playerId, PlayerStock stock) {
 		Player player = playerRepository.findById(playerId)
 				.orElseThrow(() -> new RuntimeException("Player not found with id " + playerId));
 
-		stock = playerStockRepository.save(playerId, stock);
-		player.getPlayerStocks().add(stock);
+		stock.setPlayer(player);
+
+		PlayerStock savedStock = playerStockRepository.save(stock);
+		player.getPlayerStocks().add(savedStock);
+
 		playerRepository.save(player);
 
-		return stock;
+		return savedStock;
 	}
+
 }

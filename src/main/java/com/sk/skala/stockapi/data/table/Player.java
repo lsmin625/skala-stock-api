@@ -6,7 +6,6 @@ import java.util.List;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import lombok.Data;
 
@@ -19,8 +18,6 @@ public class Player {
 
 	private double playerMoney;
 
-	@OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-	@JoinColumn(name = "player_id")
+	@OneToMany(mappedBy = "player", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<PlayerStock> playerStocks = new ArrayList<>();
-
 }

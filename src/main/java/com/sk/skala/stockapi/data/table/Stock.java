@@ -9,6 +9,7 @@ import lombok.Data;
 @Entity
 @Data
 public class Stock {
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -20,7 +21,6 @@ public class Stock {
 	}
 
 	public Stock(String name, Double price) {
-		this.id = 0L;
 		this.name = name;
 		this.price = price;
 	}
