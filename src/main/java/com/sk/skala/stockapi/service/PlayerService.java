@@ -1,5 +1,6 @@
 package com.sk.skala.stockapi.service;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -14,10 +15,11 @@ import com.sk.skala.stockapi.data.common.Response;
 import com.sk.skala.stockapi.data.table.Player;
 import com.sk.skala.stockapi.data.table.PlayerStock;
 import com.sk.skala.stockapi.data.table.Stock;
+import com.sk.skala.stockapi.exception.ParameterException;
 import com.sk.skala.stockapi.exception.ResponseException;
 import com.sk.skala.stockapi.repository.PlayerRepository;
-import com.sk.skala.stockapi.repository.PlayerStockRepository;
 import com.sk.skala.stockapi.repository.StockRepository;
+import com.sk.skala.stockapi.tools.StringTool;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +30,6 @@ public class PlayerService {
 
 	private final StockRepository stockRepository;
 	private final PlayerRepository playerRepository;
-	private final PlayerStockRepository playerStockRepository;
 
 	public Response getAllPlayers(int offset, int count) {
 		Pageable pageable = PageRequest.of(offset, count, Sort.by(Sort.Order.asc("playerId")));
@@ -57,6 +58,10 @@ public class PlayerService {
 	}
 
 	public Response createPlayer(Player player) {
+		if (StringTool.isAnyEmpty(player.getPlayerId()) || player.getPlayerMoney() <= 0) {
+			throw new ParameterException("playerId", "playerMoney");
+		}
+
 		Optional<Player> option = playerRepository.findById(player.getPlayerId());
 		if (!option.isEmpty()) {
 			throw new ResponseException(Error.DATA_DUPLICATED);
@@ -67,6 +72,10 @@ public class PlayerService {
 	}
 
 	public Response updatePlayer(Player player) {
+		if (StringTool.isAnyEmpty(player.getPlayerId()) || player.getPlayerMoney() <= 0) {
+			throw new ParameterException("playerId", "playerMoney");
+		}
+
 		Optional<Player> option = playerRepository.findById(player.getPlayerId());
 		if (option.isEmpty()) {
 			throw new ResponseException(Error.DATA_NOT_FOUND);
@@ -106,14 +115,21 @@ public class PlayerService {
 
 		player.setPlayerMoney(player.getPlayerMoney() - totalCost);
 
-		PlayerStock playerStock = new PlayerStock();
-		playerStock.setPlayer(player);
-		playerStock.setStock(stock);
-		playerStock.setStockQuantity(quantity);
+		PlayerStock playerStock = new PlayerStock(stock, quantity);
 
-		PlayerStock savedStock = playerStockRepository.save(playerStock);
+		boolean stockExists = false;
+		List<PlayerStock> playerStocks = player.getPlayerStockList();
+		for (PlayerStock existingStock : playerStocks) {
+			if (existingStock.getStockName().equals(playerStock.getStockName())) {
+				existingStock.setStockQuantity(existingStock.getStockQuantity() + quantity);
+				stockExists = true;
+				break;
+			}
+		}
+		if (!stockExists) {
+			playerStocks.add(playerStock);
+		}
 
-		player.getPlayerStocks().add(savedStock);
 		playerRepository.save(player);
 
 		return new Response();
@@ -127,28 +143,36 @@ public class PlayerService {
 		}
 		Player player = optionalPlayer.get();
 
-		Optional<PlayerStock> optionalPlayerStock = playerStockRepository.findByPlayerAndStockId(player, stockId);
-		if (optionalPlayerStock.isEmpty()) {
+		Optional<Stock> optionalStock = stockRepository.findById(stockId);
+		if (optionalStock.isEmpty()) {
 			throw new ResponseException(Error.DATA_NOT_FOUND);
 		}
-		PlayerStock playerStock = optionalPlayerStock.get();
-		Stock stock = playerStock.getStock();
+		Stock stock = optionalStock.get();
 
-		if (quantity > playerStock.getStockQuantity()) {
-			throw new ResponseException(Error.INSUFFICIENT_QUANTITY);
+		PlayerStock playerStock = new PlayerStock(stock, quantity);
+
+		boolean stockExists = false;
+		List<PlayerStock> playerStocks = player.getPlayerStockList();
+		for (PlayerStock existingStock : playerStocks) {
+			if (existingStock.getStockName().equals(playerStock.getStockName())) {
+				if (quantity > existingStock.getStockQuantity()) {
+					throw new ResponseException(Error.INSUFFICIENT_QUANTITY);
+				}
+				existingStock.setStockQuantity(existingStock.getStockQuantity() - quantity);
+				if (existingStock.getStockQuantity() == 0) {
+					playerStocks.remove(existingStock);
+				}
+				stockExists = true;
+				break;
+			}
+		}
+		if (!stockExists) {
+			throw new ResponseException(Error.DATA_NOT_FOUND);
 		}
 
 		double totalEarnings = stock.getStockPrice() * quantity;
-
 		player.setPlayerMoney(player.getPlayerMoney() + totalEarnings);
 
-		playerStock.setStockQuantity(playerStock.getStockQuantity() - quantity);
-
-		if (playerStock.getStockQuantity() == 0) {
-			player.getPlayerStocks().remove(playerStock);
-		}
-
-		playerStockRepository.save(playerStock);
 		playerRepository.save(player);
 
 		return new Response();

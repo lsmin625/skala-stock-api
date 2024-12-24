@@ -39,7 +39,7 @@ public class PlayerController {
 		return playerService.createPlayer(player);
 	}
 
-	@PutMapping("/{playerId}")
+	@PutMapping
 	public Response updatePlayer(@RequestBody Player player) {
 		return playerService.updatePlayer(player);
 	}

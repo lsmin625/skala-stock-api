@@ -3,10 +3,11 @@ package com.sk.skala.stockapi.data.table;
 import java.util.ArrayList;
 import java.util.List;
 
-import jakarta.persistence.CascadeType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.sk.skala.stockapi.tools.JsonTool;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
 import lombok.Data;
 
 @Entity
@@ -18,6 +19,26 @@ public class Player {
 
 	private double playerMoney;
 
-	@OneToMany(mappedBy = "player", cascade = CascadeType.ALL, orphanRemoval = true)
-	private List<PlayerStock> playerStocks = new ArrayList<>();
+	@JsonIgnore
+	private String playerStocks;
+
+	public Player() {
+	}
+
+	public Player(String id, double money) {
+		this.playerId = id;
+		this.playerMoney = money;
+	}
+
+	public List<PlayerStock> getPlayerStockList() {
+		if (this.playerStocks != null) {
+			return JsonTool.toList(playerStocks, PlayerStock.class);
+		} else {
+			return new ArrayList<PlayerStock>();
+		}
+	}
+
+	public void setPlayerStockList(List<PlayerStock> list) {
+		this.playerStocks = JsonTool.toString(list);
+	}
 }

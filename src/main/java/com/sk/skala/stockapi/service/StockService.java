@@ -12,6 +12,7 @@ import com.sk.skala.stockapi.config.Error;
 import com.sk.skala.stockapi.data.common.PagedList;
 import com.sk.skala.stockapi.data.common.Response;
 import com.sk.skala.stockapi.data.table.Stock;
+import com.sk.skala.stockapi.exception.ParameterException;
 import com.sk.skala.stockapi.exception.ResponseException;
 import com.sk.skala.stockapi.repository.StockRepository;
 import com.sk.skala.stockapi.tools.StringTool;
@@ -51,6 +52,10 @@ public class StockService {
 	}
 
 	public Response createStock(Stock stock) {
+		if (StringTool.isAnyEmpty(stock.getStockName()) || stock.getStockPrice() <= 0) {
+			throw new ParameterException("stockName", "stockPrice");
+		}
+
 		Optional<Stock> option = stockRepository.findByStockNameLike(StringTool.like(stock.getStockName()));
 		if (!option.isEmpty()) {
 			throw new ResponseException(Error.DATA_DUPLICATED);
@@ -63,6 +68,10 @@ public class StockService {
 	}
 
 	public Response updateStock(Stock stock) {
+		if (StringTool.isAnyEmpty(stock.getStockName()) || stock.getStockPrice() <= 0) {
+			throw new ParameterException("stockName", "stockPrice");
+		}
+
 		Optional<Stock> option = stockRepository.findById(stock.getId());
 		if (option.isEmpty()) {
 			throw new ResponseException(Error.DATA_NOT_FOUND);
