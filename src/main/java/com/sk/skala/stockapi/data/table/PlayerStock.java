@@ -13,6 +13,7 @@ public class PlayerStock extends Stock {
 
 	public PlayerStock(Stock stock, int quantity) {
 		super(stock.getStockName(), stock.getStockPrice());
+		super.setId(stock.getId());
 		this.stockQuantity = quantity;
 	}
 }

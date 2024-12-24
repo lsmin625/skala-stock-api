@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import com.sk.skala.stockapi.config.Error;
 import com.sk.skala.stockapi.data.common.PagedList;
 import com.sk.skala.stockapi.data.common.Response;
+import com.sk.skala.stockapi.data.dto.StockOrder;
 import com.sk.skala.stockapi.data.table.Player;
 import com.sk.skala.stockapi.data.table.PlayerStock;
 import com.sk.skala.stockapi.data.table.Stock;
@@ -94,20 +95,20 @@ public class PlayerService {
 	}
 
 	@Transactional
-	public Response buyPlayerStock(String playerId, Long stockId, int quantity) {
-		Optional<Player> optionalPlayer = playerRepository.findById(playerId);
+	public Response buyPlayerStock(StockOrder order) {
+		Optional<Player> optionalPlayer = playerRepository.findById(order.getPlayerId());
 		if (optionalPlayer.isEmpty()) {
 			throw new ResponseException(Error.DATA_NOT_FOUND);
 		}
 		Player player = optionalPlayer.get();
 
-		Optional<Stock> optionalStock = stockRepository.findById(stockId);
+		Optional<Stock> optionalStock = stockRepository.findById(order.getStockId());
 		if (optionalStock.isEmpty()) {
 			throw new ResponseException(Error.DATA_NOT_FOUND);
 		}
 		Stock stock = optionalStock.get();
 
-		double totalCost = stock.getStockPrice() * quantity;
+		double totalCost = stock.getStockPrice() * order.getStockQuantity();
 
 		if (totalCost > player.getPlayerMoney()) {
 			throw new ResponseException(Error.INSUFFICIENT_FUNDS);
@@ -115,13 +116,13 @@ public class PlayerService {
 
 		player.setPlayerMoney(player.getPlayerMoney() - totalCost);
 
-		PlayerStock playerStock = new PlayerStock(stock, quantity);
+		PlayerStock playerStock = new PlayerStock(stock, order.getStockQuantity());
 
 		boolean stockExists = false;
 		List<PlayerStock> playerStocks = player.getPlayerStockList();
 		for (PlayerStock existingStock : playerStocks) {
 			if (existingStock.getStockName().equals(playerStock.getStockName())) {
-				existingStock.setStockQuantity(existingStock.getStockQuantity() + quantity);
+				existingStock.setStockQuantity(existingStock.getStockQuantity() + order.getStockQuantity());
 				stockExists = true;
 				break;
 			}
@@ -129,6 +130,7 @@ public class PlayerService {
 		if (!stockExists) {
 			playerStocks.add(playerStock);
 		}
+		player.setPlayerStockList(playerStocks);
 
 		playerRepository.save(player);
 
@@ -136,29 +138,29 @@ public class PlayerService {
 	}
 
 	@Transactional
-	public Response sellPlayerStock(String playerId, Long stockId, int quantity) {
-		Optional<Player> optionalPlayer = playerRepository.findById(playerId);
+	public Response sellPlayerStock(StockOrder order) {
+		Optional<Player> optionalPlayer = playerRepository.findById(order.getPlayerId());
 		if (optionalPlayer.isEmpty()) {
 			throw new ResponseException(Error.DATA_NOT_FOUND);
 		}
 		Player player = optionalPlayer.get();
 
-		Optional<Stock> optionalStock = stockRepository.findById(stockId);
+		Optional<Stock> optionalStock = stockRepository.findById(order.getStockId());
 		if (optionalStock.isEmpty()) {
 			throw new ResponseException(Error.DATA_NOT_FOUND);
 		}
 		Stock stock = optionalStock.get();
 
-		PlayerStock playerStock = new PlayerStock(stock, quantity);
+		PlayerStock playerStock = new PlayerStock(stock, order.getStockQuantity());
 
 		boolean stockExists = false;
 		List<PlayerStock> playerStocks = player.getPlayerStockList();
 		for (PlayerStock existingStock : playerStocks) {
 			if (existingStock.getStockName().equals(playerStock.getStockName())) {
-				if (quantity > existingStock.getStockQuantity()) {
+				if (order.getStockQuantity() > existingStock.getStockQuantity()) {
 					throw new ResponseException(Error.INSUFFICIENT_QUANTITY);
 				}
-				existingStock.setStockQuantity(existingStock.getStockQuantity() - quantity);
+				existingStock.setStockQuantity(existingStock.getStockQuantity() - order.getStockQuantity());
 				if (existingStock.getStockQuantity() == 0) {
 					playerStocks.remove(existingStock);
 				}
@@ -170,7 +172,9 @@ public class PlayerService {
 			throw new ResponseException(Error.DATA_NOT_FOUND);
 		}
 
-		double totalEarnings = stock.getStockPrice() * quantity;
+		player.setPlayerStockList(playerStocks);
+
+		double totalEarnings = stock.getStockPrice() * order.getStockQuantity();
 		player.setPlayerMoney(player.getPlayerMoney() + totalEarnings);
 
 		playerRepository.save(player);

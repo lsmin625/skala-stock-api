@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sk.skala.stockapi.data.common.Response;
+import com.sk.skala.stockapi.data.dto.StockOrder;
 import com.sk.skala.stockapi.data.table.Player;
 import com.sk.skala.stockapi.service.PlayerService;
 
@@ -49,15 +50,13 @@ public class PlayerController {
 		return playerService.deletePlayer(player);
 	}
 
-	@PostMapping("/buy/{playerId}/stocks/{stockId}")
-	public Response buyPlayerStock(@PathVariable String playerId, @PathVariable Long stockId,
-			@RequestParam int quantity) {
-		return playerService.buyPlayerStock(playerId, stockId, quantity);
+	@PostMapping("/buy")
+	public Response buyPlayerStock(@RequestBody StockOrder order) {
+		return playerService.buyPlayerStock(order);
 	}
 
-	@PostMapping("/sell/{playerId}/stocks/{stockId}")
-	public Response sellPlayerStock(@PathVariable String playerId, @PathVariable Long stockId,
-			@RequestParam int quantity) {
-		return playerService.sellPlayerStock(playerId, stockId, quantity);
+	@PostMapping("/sell")
+	public Response sellPlayerStock(@RequestBody StockOrder order) {
+		return playerService.sellPlayerStock(order);
 	}
 }

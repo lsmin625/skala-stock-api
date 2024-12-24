@@ -20,8 +20,8 @@ public class DataInitializer {
 			stockRepository.save(new Stock("HealthPlus", 120.00));
 			stockRepository.save(new Stock("SkalaEdu", 150.00));
 
-			playerRepository.save(new Player("SkalaMan", 10000));
-			playerRepository.save(new Player("SmartWoman", 10000));
+			playerRepository.save(new Player("Skala.Man", 10000));
+			playerRepository.save(new Player("Smart.Woman", 10000));
 		};
 	}
 }
