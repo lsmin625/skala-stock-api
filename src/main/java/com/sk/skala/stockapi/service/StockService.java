@@ -26,7 +26,7 @@ public class StockService {
 	private final StockRepository stockRepository;
 
 	public Response getAllStocks(int offset, int count) {
-		Pageable pageable = PageRequest.of(offset, count, Sort.by(Sort.Order.asc("stockName")));
+		Pageable pageable = PageRequest.of(offset, count, Sort.by(Sort.Order.asc("id")));
 		Page<Stock> paged = stockRepository.findAll(pageable);
 
 		PagedList pagedList = new PagedList();
