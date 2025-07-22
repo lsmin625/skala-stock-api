@@ -98,6 +98,7 @@ public class PlayerService {
 			throw new ResponseException(Error.NOT_AUTHENTICATED);
 		}
 
+		player.setPlayerPassword(null);
 		Response response = new Response();
 		response.setBody(player);
 		return response;
