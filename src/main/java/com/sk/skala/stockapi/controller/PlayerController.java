@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sk.skala.stockapi.data.common.Response;
+import com.sk.skala.stockapi.data.dto.PlayerSession;
 import com.sk.skala.stockapi.data.dto.StockOrder;
 import com.sk.skala.stockapi.data.table.Player;
 import com.sk.skala.stockapi.service.PlayerService;
@@ -38,6 +39,11 @@ public class PlayerController {
 	@PostMapping
 	public Response createPlayer(@RequestBody Player player) {
 		return playerService.createPlayer(player);
+	}
+
+	@PostMapping("/login")
+	public Response loginPlayer(@RequestBody PlayerSession playerSession) {
+		return playerService.loginPlayer(playerSession);
 	}
 
 	@PutMapping

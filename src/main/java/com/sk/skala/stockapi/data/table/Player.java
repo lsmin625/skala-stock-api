@@ -6,6 +6,7 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.sk.skala.stockapi.tools.JsonTool;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import lombok.Data;
@@ -17,9 +18,12 @@ public class Player {
 	@Id
 	private String playerId;
 
+	private String playerPassword;
+
 	private double playerMoney;
 
 	@JsonIgnore
+	@Column(columnDefinition = "TEXT")
 	private String playerStocks;
 
 	public Player() {
