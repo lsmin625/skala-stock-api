@@ -17,7 +17,7 @@ public class Constant {
 	public static final String X_BFF_USER = "X-Bff-User";
 
 	public static final String JWT_ACCESS_COOKIE = "bff-access";
-	public static final int JWT_ACCESS_TTL = 12 * 60 * 60; // 12 hours
+	public static final int JWT_ACCESS_TTL = 60 * 60; // 1 hour
 
 	public static final String JWT_SECRET = "skalaBanana-skalaUnicorn-skalaToaster-skalaPickle-skalaDragon99!";
 	public static final String JWT_ISSUER = "skala-api";

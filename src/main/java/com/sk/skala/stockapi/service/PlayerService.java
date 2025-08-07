@@ -1,6 +1,8 @@
 package com.sk.skala.stockapi.service;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -12,6 +14,8 @@ import com.sk.skala.stockapi.config.Error;
 import com.sk.skala.stockapi.data.common.PagedList;
 import com.sk.skala.stockapi.data.common.Response;
 import com.sk.skala.stockapi.data.dto.PlayerSession;
+import com.sk.skala.stockapi.data.dto.PlayerStockDto;
+import com.sk.skala.stockapi.data.dto.PlayerStockListDto;
 import com.sk.skala.stockapi.data.dto.StockOrder;
 import com.sk.skala.stockapi.data.table.Player;
 import com.sk.skala.stockapi.data.table.PlayerStock;
@@ -50,14 +54,31 @@ public class PlayerService {
 		return response;
 	}
 
+	@Transactional
 	public Response getPlayerById(String playerId) {
-		Optional<Player> option = playerRepository.findById(playerId);
-		if (option.isEmpty()) {
-			throw new ResponseException(Error.DATA_NOT_FOUND);
-		}
+		// 1. 플레이어 정보 조회. 없으면 예외 발생.
+		Player player = playerRepository.findById(playerId)
+				.orElseThrow(() -> new ResponseException(Error.DATA_NOT_FOUND, "Player not found"));
 
+		// 2. 해당 플레이어가 보유한 주식 목록(PlayerStock)을 조회.
+		List<PlayerStock> playerStocks = playerStockRepository.findByPlayer_PlayerId(playerId);
+
+		// 3. 조회한 'PlayerStock' 엔터티 리스트를 'PlayerStockDto' 리스트로 변환.
+		// Java Stream API를 사용하여 간결하게 매핑합니다.
+		List<PlayerStockDto> stockDtos = playerStocks.stream()
+				.map(playerStock -> PlayerStockDto.builder().stockId(playerStock.getStock().getId())
+						.stockName(playerStock.getStock().getStockName())
+						.stockPrice(playerStock.getStock().getStockPrice()).quantity(playerStock.getQuantity()).build())
+				.collect(Collectors.toList());
+
+		// 4. 최종적으로 반환할 PlayerDetailDto 객체를 생성.
+		PlayerStockListDto playerStockListDto = PlayerStockListDto.builder().playerId(player.getPlayerId())
+				.playerMoney(player.getPlayerMoney()).stocks(stockDtos) // 변환된 주식 DTO 리스트를 설정
+				.build();
+
+		// 5. 완성된 DTO를 Response 객체에 담아 반환.
 		Response response = new Response();
-		response.setBody(option.get());
+		response.setBody(playerStockListDto);
 		return response;
 	}
 
