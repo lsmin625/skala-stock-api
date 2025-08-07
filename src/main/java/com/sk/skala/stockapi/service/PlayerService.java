@@ -1,6 +1,5 @@
 package com.sk.skala.stockapi.service;
 
-import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -20,6 +19,7 @@ import com.sk.skala.stockapi.data.table.Stock;
 import com.sk.skala.stockapi.exception.ParameterException;
 import com.sk.skala.stockapi.exception.ResponseException;
 import com.sk.skala.stockapi.repository.PlayerRepository;
+import com.sk.skala.stockapi.repository.PlayerStockRepository;
 import com.sk.skala.stockapi.repository.StockRepository;
 import com.sk.skala.stockapi.tools.StringTool;
 
@@ -32,6 +32,7 @@ public class PlayerService {
 
 	private final StockRepository stockRepository;
 	private final PlayerRepository playerRepository;
+	private final PlayerStockRepository playerStockRepository;
 	private final SessionHandler sessionHandler;
 
 	public Response getAllPlayers(int offset, int count) {
@@ -133,43 +134,34 @@ public class PlayerService {
 	public Response buyPlayerStock(StockOrder order) {
 		String playerId = sessionHandler.getPlayerId();
 
-		Optional<Player> option = playerRepository.findById(playerId);
-		if (option.isEmpty()) {
-			throw new ResponseException(Error.DATA_NOT_FOUND);
-		}
-		Player player = option.get();
+		// 1. 플레이어와 주식 엔터티 조회
+		Player player = playerRepository.findById(playerId)
+				.orElseThrow(() -> new ResponseException(Error.DATA_NOT_FOUND, "Player not found"));
 
-		Optional<Stock> optionalStock = stockRepository.findById(order.getStockId());
-		if (optionalStock.isEmpty()) {
-			throw new ResponseException(Error.DATA_NOT_FOUND);
-		}
-		Stock stock = optionalStock.get();
+		Stock stock = stockRepository.findById(order.getStockId())
+				.orElseThrow(() -> new ResponseException(Error.DATA_NOT_FOUND, "Stock not found"));
 
+		// 2. 금액 확인 및 차감
 		double totalCost = stock.getStockPrice() * order.getStockQuantity();
-
 		if (totalCost > player.getPlayerMoney()) {
 			throw new ResponseException(Error.INSUFFICIENT_FUNDS);
 		}
-
 		player.setPlayerMoney(player.getPlayerMoney() - totalCost);
-
-		PlayerStock playerStock = new PlayerStock(stock, order.getStockQuantity());
-
-		boolean stockExists = false;
-		List<PlayerStock> playerStocks = player.getPlayerStockList();
-		for (PlayerStock existingStock : playerStocks) {
-			if (existingStock.getStockName().equals(playerStock.getStockName())) {
-				existingStock.setStockQuantity(existingStock.getStockQuantity() + order.getStockQuantity());
-				stockExists = true;
-				break;
-			}
-		}
-		if (!stockExists) {
-			playerStocks.add(playerStock);
-		}
-		player.setPlayerStockList(playerStocks);
-
 		playerRepository.save(player);
+
+		// 3. PlayerStockRepository를 이용해 기존 보유 내역 조회
+		Optional<PlayerStock> optionalPlayerStock = playerStockRepository.findByPlayerAndStock(player, stock);
+
+		if (optionalPlayerStock.isPresent()) {
+			// 4-1. 이미 보유한 주식이면 수량만 추가
+			PlayerStock existingPlayerStock = optionalPlayerStock.get();
+			existingPlayerStock.setQuantity(existingPlayerStock.getQuantity() + order.getStockQuantity());
+			playerStockRepository.save(existingPlayerStock);
+		} else {
+			// 4-2. 처음 매수하는 주식이면 새로운 PlayerStock 생성
+			PlayerStock newPlayerStock = new PlayerStock(player, stock, order.getStockQuantity());
+			playerStockRepository.save(newPlayerStock);
+		}
 
 		return new Response();
 	}
@@ -178,47 +170,38 @@ public class PlayerService {
 	public Response sellPlayerStock(StockOrder order) {
 		String playerId = sessionHandler.getPlayerId();
 
-		Optional<Player> option = playerRepository.findById(playerId);
-		if (option.isEmpty()) {
-			throw new ResponseException(Error.DATA_NOT_FOUND);
-		}
-		Player player = option.get();
+		// 1. 플레이어와 주식 엔터티 조회
+		Player player = playerRepository.findById(playerId)
+				.orElseThrow(() -> new ResponseException(Error.DATA_NOT_FOUND, "Player not found"));
 
-		Optional<Stock> optionalStock = stockRepository.findById(order.getStockId());
-		if (optionalStock.isEmpty()) {
-			throw new ResponseException(Error.DATA_NOT_FOUND);
-		}
-		Stock stock = optionalStock.get();
+		Stock stock = stockRepository.findById(order.getStockId())
+				.orElseThrow(() -> new ResponseException(Error.DATA_NOT_FOUND, "Stock not found"));
 
-		PlayerStock playerStock = new PlayerStock(stock, order.getStockQuantity());
+		// 2. PlayerStockRepository를 이용해 매도할 주식 보유 내역 조회
+		PlayerStock playerStock = playerStockRepository.findByPlayerAndStock(player, stock)
+				.orElseThrow(() -> new ResponseException(Error.DATA_NOT_FOUND, "Player does not own this stock"));
 
-		boolean stockExists = false;
-		List<PlayerStock> playerStocks = player.getPlayerStockList();
-		for (PlayerStock existingStock : playerStocks) {
-			if (existingStock.getStockName().equals(playerStock.getStockName())) {
-				if (order.getStockQuantity() > existingStock.getStockQuantity()) {
-					throw new ResponseException(Error.INSUFFICIENT_QUANTITY);
-				}
-				existingStock.setStockQuantity(existingStock.getStockQuantity() - order.getStockQuantity());
-				if (existingStock.getStockQuantity() == 0) {
-					playerStocks.remove(existingStock);
-				}
-				stockExists = true;
-				break;
-			}
-		}
-		if (!stockExists) {
-			throw new ResponseException(Error.DATA_NOT_FOUND);
+		// 3. 매도 수량 확인
+		if (order.getStockQuantity() > playerStock.getQuantity()) {
+			throw new ResponseException(Error.INSUFFICIENT_QUANTITY);
 		}
 
-		player.setPlayerStockList(playerStocks);
+		// 4. 수량 변경 또는 보유 내역 삭제
+		int newQuantity = playerStock.getQuantity() - order.getStockQuantity();
+		if (newQuantity == 0) {
+			// 전부 매도한 경우, 보유 내역 삭제
+			playerStockRepository.delete(playerStock);
+		} else {
+			// 일부만 매도한 경우, 수량 업데이트
+			playerStock.setQuantity(newQuantity);
+			playerStockRepository.save(playerStock);
+		}
 
+		// 5. 플레이어 자산 증가
 		double totalEarnings = stock.getStockPrice() * order.getStockQuantity();
 		player.setPlayerMoney(player.getPlayerMoney() + totalEarnings);
-
 		playerRepository.save(player);
 
 		return new Response();
 	}
-
 }
