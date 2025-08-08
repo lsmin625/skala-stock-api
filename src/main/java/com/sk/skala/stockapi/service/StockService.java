@@ -56,8 +56,8 @@ public class StockService {
 			throw new ParameterException("stockName", "stockPrice");
 		}
 
-		Optional<Stock> option = stockRepository.findByStockNameLike(StringTool.like(stock.getStockName()));
-		if (!option.isEmpty()) {
+		Optional<Stock> option = stockRepository.findByStockName(stock.getStockName());
+		if (option.isPresent()) {
 			throw new ResponseException(Error.DATA_DUPLICATED);
 		}
 

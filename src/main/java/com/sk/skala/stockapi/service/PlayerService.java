@@ -9,6 +9,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.sk.skala.stockapi.config.Error;
 import com.sk.skala.stockapi.data.common.PagedList;
@@ -27,7 +28,6 @@ import com.sk.skala.stockapi.repository.PlayerStockRepository;
 import com.sk.skala.stockapi.repository.StockRepository;
 import com.sk.skala.stockapi.tools.StringTool;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -54,7 +54,7 @@ public class PlayerService {
 		return response;
 	}
 
-	@Transactional
+	@Transactional(readOnly = true)
 	public Response getPlayerById(String playerId) {
 		// 1. 플레이어 정보 조회. 없으면 예외 발생.
 		Player player = playerRepository.findById(playerId)
