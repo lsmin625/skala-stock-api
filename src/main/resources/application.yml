@@ -1,5 +1,5 @@
 server:
-  port: 9080
+  port: 8080
 
 management:
   endpoints:
@@ -33,7 +33,13 @@ spring:
       ddl-auto: update
     show-sql: true
     open-in-view: false
-    
+
+springdoc:
+  swagger-ui:
+    path: /swagger/swagger-ui # Swagger UI 접속 경로 변경
+  api-docs:
+    path: /swagger/swagger-docs
+      
 application:
   name: "SKALA-STOCK-API"
   health:
