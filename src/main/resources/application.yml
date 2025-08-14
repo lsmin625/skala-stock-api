@@ -36,9 +36,9 @@ spring:
 
 springdoc:
   swagger-ui:
-    path: /swagger/swagger-ui # Swagger UI 접속 경로 변경
+    path: /api/swagger-ui # Swagger UI 접속 경로 변경
   api-docs:
-    path: /swagger/swagger-docs
+    path: /api/oas-docs
       
 application:
   name: "SKALA-STOCK-API"
